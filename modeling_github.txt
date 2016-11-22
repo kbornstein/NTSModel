@@ -1,0 +1,143 @@
+================================================================================================================================
+================================================================================================================================
+Markov Chain Transmission Matrix Model of hospitalizations due to iNTS and the effects of vaccine implementation scenarios
+
+Citation:
+Bornstein, K., Hungerford, L., Hartley, D., Sorkin, J.D., Tapia, M.D., Sow, S.O., … & Levine, M.M. (2016).  Modeling the potential for vaccination to diminish the burden of invasive non-typhoidal Salmonella  disease in young children in Mali, West Africa.  Manuscript submitted for publication to PLoS: Neglected Tropical Diseases.
+
+================================================================================================================================
+================================================================================================================================
+
+library("markovchain")
+byRow <- TRUE
+pop <- 1251700
+br <- 0.0015
+
+#Key Parameters (Point)
+pop <- total number of individuals in the population
+br <- crude birth rate
+B1-7 <- age dependent incidence rates per 2 weeks
+u1-3 <- age dependent all-cause mortality rates
+cf1-2 <- age dependent case fatality rates
+C1-3 <- vaccine coverage rates
+e1-3,b,c <- vaccine efficacy rates (1-vaccine efficacy)
+
+#Opening clause of variable Distribution Analysis, 1000 runs
+M<-1000
+for (i in 1:M){
+B1-7 = runif(1, min, max)
+u1-3 = runif(1, min, max)
+cf1-2 = runif(1, min, max)
+C1-3=rtriangle(1, min, max, pointestimate)
+e1-3=rtriangle(1, min, max, pointestimate)
+
+#Variable equations
+#Incidence rates among different vaccinated scenarios
+vB1<- B1 * e1
+vB2<-B1 * e2
+vB3<- B1 * e3
+bB<- B6 * eb
+cB<- B6 * ec
+ve<-u2+0.0088
+
+#Probability of staying in the same age group without event of death, infection, or vaccination
+va1va1<-1-vB1-C2-ve
+va2va2<-1-vB2-C3-ve
+va3va3<-1-vB3-ve
+vb1vb1<-1-vB1-C2-ve
+vb2vb2<-1-vB2-ve
+vc1vc1<-1-vB1-ve
+s1s1<-1-0.5-B1-u1
+s2s3<-1-B1-C1-u1
+s3s4<-1-B1-u1
+s4s5<-1-B2-C1-u2
+s5s6<-1-B2-u2
+s6s7<-1-B2-C1-u2
+s7s8<-1-B2-u2
+s8s8<-1-0.125-B3-u2
+s9s9<-1-0.25-B4-u2
+s10s10<-1-0.25-B5-u3
+s11s11<-1-0.167-B6-u3
+s12s12<-1-0.05-B6-u3
+s13e<-u3+0.0128
+s13s13<-1-B7-s13e
+bste<-u3+0.0096
+bstbst<-1-bB-bste
+cue<-u3+0.0110
+cucu<-1-cB-cue
+i1r1<-1-cf1
+i2r2<-1-cf2
+i3r3<-1-cf2
+i4r4<-1-cf2
+
+#Markov Chain transmission Matrix
+#birth = place holder for births entering the population
+#S1-13 = Susceptibles
+#I1-4 = Infected
+#VA1-VC1 = Vaccine doses
+#Bst = Booster Vaccine dose
+#CU = Catch-up Campaign vaccination
+#CF1-4 = Case fatalities
+#R1-4 = Individuals recovered from infection, protected against future infection
+#vax = previously vaccinated individuals in the population
+#exit = place holder for individuals who have aged out of the model or non-NTS deaths
+
+Vax <- new("markovchain", states = c("birth", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12", "S13", "I1", "I2", "I3", "I4", "VA1", "VA2", "VA3", "VB1", "VB2", "VC1", "Bst", "CU", "CF1", "CF2", "CF3", "CF4", "R1", "R2", "R3", "R4", "vax", "exit"), 
+		transitionMatrix = matrix(data = c(1,(pop*br),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, -(pop*br),
+							0,s1s1,0.5,0,0,0,0,0,0,0,0,0,0,0,B1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u1,
+							0,0,0,s2s3,0,0,0,0,0,0,0,0,0,0,0,B1,0,0,C1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u1, 
+							0,0,0,0,s3s4,0,0,0,0,0,0,0,0,0,0,B1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u1,
+							0,0,0,0,0,s4s5,0,0,0,0,0,0,0,0,0,B2,0,0,0,0,0,C1,0,0,0,0,0,0,0,0,0,0,0,0,0,u2,
+							0,0,0,0,0,0,s5s6,0,0,0,0,0,0,0,0,B2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u2,
+							0,0,0,0,0,0,0,s6s7,0,0,0,0,0,0,0,B2,0,0,0,0,0,0,0,C1,0,0,0,0,0,0,0,0,0,0,0,u2,
+							0,0,0,0,0,0,0,0,s7s8,0,0,0,0,0,0,B2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u2,
+							0,0,0,0,0,0,0,0,s8s8,0.125,0,0,0,0,0,0,B3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u2,
+							0,0,0,0,0,0,0,0,0,s9s9,0.25,0,0,0,0,0,B4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u2,
+							0,0,0,0,0,0,0,0,0,0,s10s10,0.25,0,0,0,0,0,B5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u3,
+							0,0,0,0,0,0,0,0,0,0,0,s11s11,0.167,0,0,0,0,B6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u3,
+							0,0,0,0,0,0,0,0,0,0,0,0,s12s12,0.05,0,0,0,B6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,u3,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,s13s13,0,0,0,B7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,s13e,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,cf1,0,0,0,i1r1,0,0,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,cf2,0,0,0,i2r2,0,0,0,0, 
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,cf2,0,0,0,i3r3,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,cf2,0,0,0,i4r4,0,0, 
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,vB1,0,0,va1va1,C2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,ve,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,vB2,0,0,0,va2va2,C3,0,0,0,0,0,0,0,0,0,0,0,0,0,ve,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,vB3,0,0,0,0,va3va3,0,0,0,0,0,0,0,0,0,0,0,0,0,ve,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,vB1,0,0,0,0,0,vb1vb1,C2,0,0,0,0,0,0,0,0,0,0,0,ve,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,vB2,0,0,0,0,0,0,vb2vb2,0,0,0,0,0,0,0,0,0,0,0,ve,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,vB1,0,0,0,0,0,0,0,vc1vc1,0,0,0,0,0,0,0,0,0,0,ve,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,bB,0,0,0,0,0,0,0,0,bstbst,0,0,0,0,0,0,0,0,0,0,bste,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,cB,0,0,0,0,0,0,0,0,0,cucu,0,0,0,0,0,0,0,0,0,cue,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+							0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1), byrow = byRow, nrow = 36), 
+		name = "Vax")
+
+#initial <- c(36 value vector of inital values for each state)
+
+#Example model runs
+Run2weeks <- initial * Vax
+Run10years <- initial * (Vax^260)
+
+
+#End clause of variable Distribution Analysis, 1000 runs
+if (i==1) {results <- Run10years}
+else if (i>1){results<-rbind(results, Run10years)}
+}
+
+#Distribution Analysis file save
+path <- "file path"
+write.table(results, file=path, sep=",", row.names=FALSE, col.names=FALSE)
+
+
+
+
+
